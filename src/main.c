@@ -5,8 +5,53 @@
 #include "main.h"
 #include "particle.h"
 
-
 #define NUM_PARTICLES 100
+
+
+/**
+ * draw_circle - Draws a circle outline.
+ * @renderer: The SDL Renderer
+ * @centerX: The x-coordinates of the circle's center.
+ * @centerY: The y-coordinates of the circle's center.
+ * @radius: The radius of the circle
+ */
+void draw_circle(SDL_Renderer *renderer, int centerX, int centerY, int radius) {
+	int offsetX, offsetY, d;
+	int status;
+
+	offsetX = 0;
+	offsetY = radius;
+	d = radius -1;
+	status = 0;
+
+	while (offsetY >= offsetX) {
+		status += SDL_RenderDrawPoint(renderer, centerX + offsetX, centerY + offsetY);
+        status += SDL_RenderDrawPoint(renderer, centerX + offsetY, centerY + offsetX);
+        status += SDL_RenderDrawPoint(renderer, centerX - offsetX, centerY + offsetY);
+        status += SDL_RenderDrawPoint(renderer, centerX - offsetY, centerY + offsetX);
+        status += SDL_RenderDrawPoint(renderer, centerX + offsetX, centerY - offsetY);
+        status += SDL_RenderDrawPoint(renderer, centerX + offsetY, centerY - offsetX);
+        status += SDL_RenderDrawPoint(renderer, centerX - offsetX, centerY - offsetY);
+        status += SDL_RenderDrawPoint(renderer, centerX - offsetY, centerY - offsetX);
+
+		if (status < 0) {
+			status -= 1;
+			break;
+		}
+
+		if (d >= 2*offsetX) {
+            d -= 2*offsetX + 1;
+            offsetX +=1;
+        } else if (d < 2 * (radius - offsetY)) {
+            d += 2*offsetY -1;
+            offsetY -= 1;
+        } else {
+            d += 2*(offsetY - offsetX - 1);
+            offsetY -= 1;
+            offsetX += 1;
+        }
+	}
+}
 
 
 /**
@@ -41,22 +86,7 @@ int main(void) {
 
 	/** Create particles */
 	Particle particles[NUM_PARTICLES];
-	for (int i = 0; i < NUM_PARTICLES; i++) {
-		particles[i].x = rand() % SCREEN_WIDTH;
-		particles[i].y = rand() % SCREEN_HEIGHT;
-		particles[i].vx = ((rand() % 100) / 50.0) - 1; /* Random velocity between -1 and 1 */
-		particles[i].vy = ((rand() % 100) / 50.0) - 1;
-		particles[i].ax = 0;
-		particles[i].ay = 0;
-		particles[i].radius = 5;
-		particles[i].mass = 1;
-		particles[i].color = (SDL_Color){
-			(int)(rand() % 255),
-			(int)(rand() % 255),
-			(int)(rand() % 255),
-			(int)(rand() % 255),
-			};
-	}
+	initialize_particles(particles, NUM_PARTICLES);
 
 	/** Main loop */
 	bool running = true;
@@ -68,6 +98,10 @@ int main(void) {
 				case SDL_QUIT:
 					running = false;
 					break;
+				case SDL_KEYDOWN:
+					if (event.key.keysym.sym == SDLK_r) {
+						initialize_particles(particles, NUM_PARTICLES);
+					}
 
 				default:
 					break;
@@ -76,12 +110,17 @@ int main(void) {
 
 		/* Update Particles */
 		for (int i = 0; i < NUM_PARTICLES; i++) {
-			update_particle(&particles[i], 0.5); /* Assuming 60fps, dt = 1/60 */
+			update_particle(&particles[i], 0.16); /* Assuming 60fps, dt = 1/60 */
 		}
 
+
 		/* Render */
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
+
+		/* Draw the circular boundary */
+		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+		draw_circle(renderer, BOUNDARY_CENTER_X, BOUNDARY_CENTER_Y, BOUNDARY_RADIUS);
 
 		for (int i = 0; i < NUM_PARTICLES; i++) {
 			render_particle(renderer, &particles[i]);
